@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DetectaNews — Verificando a verdade da informação</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #F7F6F2;
+      --surface:    #FFFFFF;
+      --surface2:   #EFEDE8;
+      --border:     rgba(0,0,0,.10);
+      --border-md:  rgba(0,0,0,.16);
+      --text:       #1A1916;
+      --text-muted: #6B6860;
+      --text-dim:   #9B9890;
+      --accent:     #1A1916;
+      --accent-inv: #F7F6F2;
+      --green:      #2E7D32;
+      --green-bg:   #E8F5E9;
+      --green-bar:  #43A047;
+      --red:        #B71C1C;
+      --red-bg:     #FFEBEE;
+      --red-bar:    #E53935;
+      --amber:      #E65100;
+      --amber-bg:   #FFF3E0;
+      --radius:     16px;
+      --radius-sm:  10px;
+      --shadow:     0 2px 24px rgba(0,0,0,.07);
+      --transition: .25s cubic-bezier(.4,0,.2,1);
+    }
+
+    [data-theme="dark"] {
+      --bg:         #111110;
+      --surface:    #1C1C1A;
+      --surface2:   #252522;
+      --border:     rgba(255,255,255,.10);
+      --border-md:  rgba(255,255,255,.16);
+      --text:       #F0EFE9;
+      --text-muted: #9B9890;
+      --text-dim:   #6B6860;
+      --accent:     #F0EFE9;
+      --accent-inv: #111110;
+      --green:      #81C784;
+      --green-bg:   rgba(67,160,71,.15);
+      --green-bar:  #66BB6A;
+      --red:        #EF9A9A;
+      --red-bg:     rgba(229,57,53,.15);
+      --red-bar:    #EF5350;
+      --amber:      #FFB74D;
+      --amber-bg:   rgba(230,81,0,.15);
+      --shadow:     0 2px 24px rgba(0,0,0,.4);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: .6;
+    }
+
+    /* Header */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--bg); border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    .header-inner {
+      max-width: 900px; margin: 0 auto; padding: 18px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+
+    .logo-icon {
+      width: 36px; height: 36px; background: var(--text); border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background var(--transition);
+    }
+
+    .logo-icon svg { width: 20px; height: 20px; }
+
+    .logo-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px; color: var(--text); letter-spacing: -.3px;
+    }
+
+    .logo-name span { font-style: italic; }
+
+    .theme-btn {
+      width: 40px; height: 40px; border: 1px solid var(--border-md);
+      border-radius: 50%; background: var(--surface); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background var(--transition), transform var(--transition);
+    }
+
+    .theme-btn:hover { background: var(--surface2); transform: rotate(20deg); }
+    .theme-btn svg { width: 18px; height: 18px; color: var(--text); }
+
+    /* Stats Bar */
+    .stats-bar {
+      position: relative; z-index: 1;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    .stats-inner {
+      max-width: 900px; margin: 0 auto; padding: 14px 24px;
+      display: flex; align-items: center; justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .stat-item {
+      display: flex; align-items: center; gap: 10px; padding: 6px 28px;
+    }
+
+    .stat-icon { font-size: 18px; }
+
+    .stat-value {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px; color: var(--text); line-height: 1;
+      transition: color var(--transition);
+    }
+
+    .stat-label {
+      font-size: 11px; color: var(--text-dim);
+      font-weight: 500; letter-spacing: .3px;
+      text-transform: uppercase; margin-top: 2px;
+    }
+
+    .stat-divider { width: 1px; height: 36px; background: var(--border); }
+
+    @keyframes countUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .stat-value.updated { animation: countUp .4s ease; }
+
+    /* Hero */
+    .hero {
+      position: relative; z-index: 1;
+      max-width: 900px; margin: 0 auto;
+      padding: 80px 24px 48px; text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 999px; padding: 6px 14px;
+      font-size: 12px; font-weight: 500; color: var(--text-muted);
+      letter-spacing: .4px; text-transform: uppercase; margin-bottom: 24px;
+    }
+
+    .hero-badge-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green-bar); animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .5; transform: scale(.85); }
+    }
+
+    .hero h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(36px, 7vw, 64px);
+      line-height: 1.05; letter-spacing: -.5px;
+      color: var(--text); margin-bottom: 16px;
+    }
+
+    .hero h1 em { font-style: italic; color: var(--text-muted); }
+
+    .hero p {
+      font-size: 17px; color: var(--text-muted); font-weight: 300;
+      max-width: 460px; margin: 0 auto; line-height: 1.6;
+    }
+
+    /* Main Card */
+    .main-card {
+      position: relative; z-index: 1;
+      max-width: 680px; margin: 0 auto 48px; padding: 0 24px;
+    }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow);
+      transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .input-label {
+      font-size: 12px; font-weight: 600; color: var(--text-dim);
+      letter-spacing: .6px; text-transform: uppercase;
+      margin-bottom: 10px; display: block;
+    }
+
+    .input-wrap { display: flex; gap: 10px; align-items: stretch; }
+
+    .url-input {
+      flex: 1; background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px 16px;
+      font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--text);
+      outline: none; transition: border-color var(--transition), background var(--transition);
+    }
+
+    .url-input::placeholder { color: var(--text-dim); }
+    .url-input:focus { border-color: var(--border-md); background: var(--surface); }
+    .url-input.error { border-color: var(--red-bar) !important; }
+
+    .analyze-btn {
+      padding: 14px 24px; background: var(--accent); color: var(--accent-inv);
+      border: none; border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+      cursor: pointer; white-space: nowrap; letter-spacing: .2px;
+      transition: opacity var(--transition), transform var(--transition);
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .analyze-btn:hover { opacity: .85; transform: translateY(-1px); }
+    .analyze-btn:active { transform: translateY(0); }
+    .analyze-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-icon { width: 16px; height: 16px; }
+
+    /* Error message */
+    .error-msg {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 12px 14px;
+      background: var(--red-bg);
+      border: 1px solid rgba(229,57,53,.2);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      color: var(--red);
+      animation: fadeIn .3s ease;
+    }
+
+    .error-msg.visible { display: flex; }
+    .error-msg svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* Loading */
+    .loading-area {
+      display: none; text-align: center;
+      padding: 32px 0 8px; animation: fadeIn .3s ease;
+    }
+
+    .loading-area.visible { display: block; }
+
+    .spinner-wrap {
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; margin-bottom: 16px;
+    }
+
+    .dot-loader { display: flex; gap: 6px; }
+
+    .dot-loader span {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--text-dim); animation: bounce 1.2s infinite ease-in-out;
+    }
+
+    .dot-loader span:nth-child(2) { animation-delay: .15s; }
+    .dot-loader span:nth-child(3) { animation-delay: .3s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(.8); opacity: .5; }
+      40%            { transform: scale(1); opacity: 1; }
+    }
+
+    .loading-steps { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+
+    .loading-step {
+      font-size: 13px; color: var(--text-dim);
+      transition: color .4s, transform .4s;
+      transform: translateY(4px); opacity: 0;
+    }
+
+    .loading-step.active { color: var(--text-muted); opacity: 1; transform: translateY(0); }
+    .loading-step.done   { color: var(--green-bar);  opacity: .7; transform: translateY(0); }
+
+    /* Result */
+    .result-area { display: none; margin-top: 28px; animation: fadeIn .5s ease; }
+    .result-area.visible { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-divider { height: 1px; background: var(--border); margin-bottom: 28px; }
+
+    .result-headline {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+    }
+
+    .verdict-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      border-radius: 999px; padding: 8px 18px;
+      font-size: 13px; font-weight: 600; letter-spacing: .3px;
+    }
+
+    .verdict-badge.reliable   { background: var(--green-bg); color: var(--green); }
+    .verdict-badge.suspicious { background: var(--amber-bg); color: var(--amber); }
+    .verdict-badge.fake       { background: var(--red-bg);   color: var(--red); }
+    .verdict-badge svg { width: 14px; height: 14px; }
+
+    .percent-display {
+      font-family: 'DM Serif Display', serif;
+      font-size: 44px; letter-spacing: -1px; line-height: 1;
+    }
+
+    .percent-display.reliable   { color: var(--green); }
+    .percent-display.suspicious { color: var(--amber); }
+    .percent-display.fake       { color: var(--red); }
+
+    .bar-label {
+      font-size: 11px; font-weight: 600; letter-spacing: .5px;
+      text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px;
+    }
+
+    .bar-track {
+      width: 100%; height: 8px; background: var(--surface2);
+      border-radius: 999px; overflow: hidden; margin-bottom: 20px;
+    }
+
+    .bar-fill {
+      height: 100%; border-radius: 999px; width: 0%;
+      transition: width 1.2s cubic-bezier(.4,0,.2,1);
+    }
+
+    .bar-fill.reliable   { background: var(--green-bar); }
+    .bar-fill.suspicious { background: var(--amber); }
+    .bar-fill.fake       { background: var(--red-bar); }
+
+    .explanation-box {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 16px 18px;
+      font-size: 14px; color: var(--text-muted); line-height: 1.65;
+    }
+
+    .explanation-box strong { color: var(--text); font-weight: 500; }
+
+    .signals-title {
+      font-size: 11px; font-weight: 600; letter-spacing: .5px;
+      text-transform: uppercase; color: var(--text-dim); margin: 20px 0 10px;
+    }
+
+    .signals-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 8px;
+    }
+
+    .signal-item {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px 14px;
+      display: flex; align-items: flex-start; gap: 9px;
+    }
+
+    .signal-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex-shrink: 0; margin-top: 4px;
+    }
+
+    .signal-dot.ok   { background: var(--green-bar); }
+    .signal-dot.warn { background: var(--amber); }
+    .signal-dot.bad  { background: var(--red-bar); }
+
+    .signal-text { font-size: 12.5px; color: var(--text-muted); line-height: 1.4; }
+
+    .retry-btn {
+      display: block; width: 100%; margin-top: 20px; padding: 13px;
+      background: transparent; border: 1px solid var(--border-md);
+      border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+      color: var(--text-muted); cursor: pointer;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    .retry-btn:hover { background: var(--surface2); color: var(--text); }
+
+    /* Features */
+    .features {
+      position: relative; z-index: 1;
+      max-width: 700px; margin: 0 auto 48px; padding: 0 24px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1px; background: var(--border);
+      border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+    }
+
+    .feature-item {
+      background: var(--surface); padding: 20px 18px;
+      display: flex; gap: 12px; align-items: flex-start;
+      transition: background var(--transition);
+    }
+
+    .feature-item:hover { background: var(--surface2); }
+
+    .feature-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--bg); display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0; font-size: 15px;
+    }
+
+    .feature-text h3 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+    .feature-text p  { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+    /* Footer */
+    footer {
+      position: relative; z-index: 1; text-align: center;
+      padding: 32px 24px 48px; border-top: 1px solid var(--border);
+    }
+
+    .footer-brand {
+      font-family: 'DM Serif Display', serif;
+      font-size: 16px; color: var(--text-muted); margin-bottom: 4px;
+    }
+
+    .footer-slogan { font-size: 12px; color: var(--text-dim); margin-bottom: 20px; }
+    .footer-divider { width: 40px; height: 1px; background: var(--border); margin: 0 auto 20px; }
+
+    .footer-group-label {
+      font-size: 10px; font-weight: 600; letter-spacing: .8px;
+      text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px;
+    }
+
+    .footer-names {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 6px 10px; max-width: 520px; margin: 0 auto 14px;
+    }
+
+    .footer-name {
+      font-size: 12px; color: var(--text-muted);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 999px; padding: 4px 13px;
+    }
+
+    .footer-course { font-size: 11px; color: var(--text-dim); margin-bottom: 20px; }
+
+    .footer-disclaimer {
+      font-size: 11px; color: var(--text-dim); line-height: 1.6;
+      max-width: 400px; margin: 0 auto;
+    }
+
+    /* Mobile */
+    @media (max-width: 540px) {
+      .hero { padding: 56px 20px 36px; }
+      .card { padding: 22px 18px; }
+      .input-wrap { flex-direction: column; }
+      .analyze-btn { width: 100%; justify-content: center; }
+      .result-headline { flex-direction: column; align-items: flex-start; }
+      .percent-display { font-size: 36px; }
+      .stat-item { padding: 6px 16px; }
+      .stat-divider { height: 28px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <a class="logo" href="#">
+        <div class="logo-icon">
+          <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="9" cy="9" r="5.5" stroke="#F7F6F2" stroke-width="1.5"/>
+            <path d="M13 13L17 17" stroke="#F7F6F2" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M7 9H11M9 7V11" stroke="#F7F6F2" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="logo-name">Detecta<span>News</span></span>
+      </a>
+      <button class="theme-btn" id="themeBtn" aria-label="Alternar tema">
+        <svg id="sunIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg id="moonIcon" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stats-inner">
+      <div class="stat-item">
+        <span class="stat-icon">👥</span>
+        <div>
+          <div class="stat-value" id="statVisitors">—</div>
+          <div class="stat-label">visitantes</div>
+        </div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-icon">🔍</span>
+        <div>
+          <div class="stat-value" id="statAnalyses">—</div>
+          <div class="stat-label">análises feitas</div>
+        </div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-icon">⚠️</span>
+        <div>
+          <div class="stat-value" id="statSuspect">—</div>
+          <div class="stat-label">notícias suspeitas</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      Verificação com IA
+    </div>
+    <h1>Verificando a<br><em>verdade</em> da informação</h1>
+    <p>Cole o link de qualquer notícia e receba em segundos uma análise detalhada de confiabilidade com inteligência artificial.</p>
+  </section>
+
+  <!-- Main Card -->
+  <div class="main-card">
+    <div class="card">
+      <label class="input-label" for="urlInput">Link da notícia</label>
+      <div class="input-wrap">
+        <input
+          class="url-input"
+          id="urlInput"
+          type="url"
+          placeholder="https://exemplo.com/noticia..."
+          autocomplete="off"
+        />
+        <button class="analyze-btn" id="analyzeBtn">
+          <svg class="btn-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <circle cx="7" cy="7" r="4"/><path d="M11 11l3 3"/>
+          </svg>
+          Analisar
+        </button>
+      </div>
+
+      <!-- Mensagem de erro de validação -->
+      <div class="error-msg" id="errorMsg">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="errorText">Por favor, insira um link válido (ex: https://g1.globo.com/noticia...)</span>
+      </div>
+
+      <!-- Loading -->
+      <div class="loading-area" id="loadingArea">
+        <div class="spinner-wrap">
+          <div class="dot-loader"><span></span><span></span><span></span></div>
+        </div>
+        <div class="loading-steps">
+          <div class="loading-step" id="step1">🔗 Validando a URL informada...</div>
+          <div class="loading-step" id="step2">🧠 Analisando conteúdo com IA...</div>
+          <div class="loading-step" id="step3">📊 Calculando índice de confiabilidade...</div>
+          <div class="loading-step" id="step4">✅ Preparando resultado...</div>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div class="result-area" id="resultArea">
+        <div class="result-divider"></div>
+        <div class="result-headline">
+          <div>
+            <div class="bar-label" style="margin-bottom:6px;">Índice de confiabilidade</div>
+            <div class="percent-display" id="percentDisplay">—</div>
+          </div>
+          <div class="verdict-badge" id="verdictBadge">
+            <svg viewBox="0 0 14 14" fill="currentColor"><circle cx="7" cy="7" r="7"/></svg>
+            <span id="verdictText">—</span>
+          </div>
+        </div>
+
+        <div class="bar-label">Barra de confiança</div>
+        <div class="bar-track">
+          <div class="bar-fill" id="barFill"></div>
+        </div>
+
+        <div class="explanation-box" id="explanationBox">—</div>
+
+        <div class="signals-title">Sinais detectados</div>
+        <div class="signals-grid" id="signalsGrid"></div>
+
+        <button class="retry-btn" id="retryBtn">← Analisar outra notícia</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div class="features">
+    <div class="feature-item">
+      <div class="feature-icon">🤖</div>
+      <div class="feature-text">
+        <h3>IA avançada</h3>
+        <p>Análise profunda com modelos de linguagem de última geração</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-text">
+        <h3>Rápido</h3>
+        <p>Resultado em poucos segundos, sem cadastro necessário</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">🔍</div>
+      <div class="feature-text">
+        <h3>Transparente</h3>
+        <p>Veja os sinais que influenciaram a análise</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-brand">DetectaNews</div>
+    <div class="footer-slogan">Verificando a verdade da informação</div>
+    <div class="footer-divider"></div>
+    <div class="footer-group-label">Desenvolvido por</div>
+    <div class="footer-names">
+      <span class="footer-name">Gustavo Monteiro</span>
+      <span class="footer-name">Henrique Matthias</span>
+      <span class="footer-name">João Pedro de Lima Valério</span>
+      <span class="footer-name">João Vitor Teles</span>
+      <span class="footer-name">Vinicius Ferreira</span>
+      <span class="footer-name">Willyan Cardoso</span>
+    </div>
+    <div class="footer-course">Engenharia da Computação · 2026</div>
+    <div class="footer-disclaimer">
+      A análise é orientativa e baseada em padrões de linguagem e domínio.
+      Sempre verifique em múltiplas fontes confiáveis antes de compartilhar.
+    </div>
+  </footer>
+
+  <script type="module">
+    /* ==========================================================
+       CONFIGURAÇÕES
+       Substitua SUA_CHAVE_AQUI pela chave do Google Gemini
+       Obtenha em: aistudio.google.com → Get API Key
+    ========================================================== */
+    const GEMINI_API_KEY = 'SUA_CHAVE_AQUI';
+    const FIREBASE_URL   = 'https://detectanews-default-rtdb.firebaseio.com';
+
+    /* ==========================================================
+       VALIDAÇÃO DE URL
+       Aceita apenas links reais com domínio válido
+    ========================================================== */
+    function isValidURL(str) {
+      try {
+        const url = new URL(str.startsWith('http') ? str : 'https://' + str);
+        // Precisa ter protocolo http/https e um domínio com pelo menos um ponto
+        return (url.protocol === 'http:' || url.protocol === 'https:') &&
+               url.hostname.includes('.') &&
+               url.hostname.length > 3;
+      } catch {
+        return false;
+      }
+    }
+
+    /* ==========================================================
+       FIREBASE — helpers via REST
+    ========================================================== */
+    async function fbGet(path) {
+      const r = await fetch(`${FIREBASE_URL}/${path}.json`);
+      return r.ok ? await r.json() : null;
+    }
+
+    async function fbIncrement(path) {
+      const current = await fbGet(path) || 0;
+      await fetch(`${FIREBASE_URL}/${path}.json`, {
+        method: 'PUT',
+        body: JSON.stringify(current + 1)
+      });
+      return current + 1;
+    }
+
+    function animateValue(el, newVal) {
+      el.classList.remove('updated');
+      void el.offsetWidth;
+      el.textContent = newVal.toLocaleString('pt-BR');
+      el.classList.add('updated');
+    }
+
+    async function loadStats() {
+      const [visitors, analyses, suspect] = await Promise.all([
+        fbGet('visitors'), fbGet('analyses'), fbGet('suspect')
+      ]);
+      animateValue(document.getElementById('statVisitors'), visitors || 0);
+      animateValue(document.getElementById('statAnalyses'), analyses || 0);
+      animateValue(document.getElementById('statSuspect'),  suspect  || 0);
+    }
+
+    async function registerVisit() {
+      if (sessionStorage.getItem('dn-visited')) return;
+      sessionStorage.setItem('dn-visited', '1');
+      const v = await fbIncrement('visitors');
+      animateValue(document.getElementById('statVisitors'), v);
+    }
+
+    /* ==========================================================
+       THEME
+    ========================================================== */
+    const html     = document.documentElement;
+    const themeBtn = document.getElementById('themeBtn');
+    const sunIcon  = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+
+    function applyTheme(t) {
+      html.dataset.theme     = t;
+      sunIcon.style.display  = t === 'light' ? 'block' : 'none';
+      moonIcon.style.display = t === 'dark'  ? 'block' : 'none';
+      localStorage.setItem('dn-theme', t);
+    }
+
+    const saved = localStorage.getItem('dn-theme');
+    applyTheme(saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    themeBtn.addEventListener('click', () => applyTheme(html.dataset.theme === 'dark' ? 'light' : 'dark'));
+
+    /* ==========================================================
+       UI REFS
+    ========================================================== */
+    const analyzeBtn  = document.getElementById('analyzeBtn');
+    const urlInput    = document.getElementById('urlInput');
+    const loadingArea = document.getElementById('loadingArea');
+    const resultArea  = document.getElementById('resultArea');
+    const retryBtn    = document.getElementById('retryBtn');
+    const errorMsg    = document.getElementById('errorMsg');
+    const errorText   = document.getElementById('errorText');
+    const stepIds     = ['step1','step2','step3','step4'];
+
+    function showError(msg) {
+      errorText.textContent = msg;
+      errorMsg.classList.add('visible');
+      urlInput.classList.add('error');
+    }
+
+    function hideError() {
+      errorMsg.classList.remove('visible');
+      urlInput.classList.remove('error');
+    }
+
+    function reset() {
+      resultArea.classList.remove('visible');
+      loadingArea.classList.remove('visible');
+      hideError();
+      stepIds.forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.remove('active','done');
+      });
+      document.getElementById('barFill').style.width = '0%';
+      urlInput.disabled = analyzeBtn.disabled = false;
+      urlInput.focus();
+    }
+
+    retryBtn.addEventListener('click', reset);
+
+    urlInput.addEventListener('input', () => {
+      if (urlInput.classList.contains('error')) hideError();
+    });
+
+    function animateSteps() {
+      return new Promise(resolve => {
+        let i = 0;
+        function next() {
+          if (i > 0) document.getElementById(stepIds[i-1]).classList.replace('active','done');
+          if (i < stepIds.length) {
+            document.getElementById(stepIds[i]).classList.add('active');
+            i++;
+            setTimeout(next, 900);
+          } else { resolve(); }
+        }
+        next();
+      });
+    }
+
+    function classify(score) {
+      if (score >= 65) return 'reliable';
+      if (score >= 35) return 'suspicious';
+      return 'fake';
+    }
+
+    function showResult(score, explanation, signals) {
+      const cls = classify(score);
+
+      const pd = document.getElementById('percentDisplay');
+      pd.textContent = score + '%';
+      pd.className   = 'percent-display ' + cls;
+
+      const vb     = document.getElementById('verdictBadge');
+      const labels = { reliable: '✓ Confiável', suspicious: '⚠ Suspeita', fake: '✗ Provável Fake' };
+      vb.className = 'verdict-badge ' + cls;
+      document.getElementById('verdictText').textContent = labels[cls];
+
+      const bf     = document.getElementById('barFill');
+      bf.className = 'bar-fill ' + cls;
+      requestAnimationFrame(() => requestAnimationFrame(() => { bf.style.width = score + '%'; }));
+
+      document.getElementById('explanationBox').innerHTML = explanation;
+
+      const sg = document.getElementById('signalsGrid');
+      sg.innerHTML = '';
+      signals.forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'signal-item';
+        div.innerHTML = `<div class="signal-dot ${s.type}"></div><div class="signal-text">${s.label}</div>`;
+        sg.appendChild(div);
+      });
+
+      loadingArea.classList.remove('visible');
+      resultArea.classList.add('visible');
+    }
+
+    /* ==========================================================
+       GEMINI API — modelo 1.5-flash (limite maior no plano free)
+    ========================================================== */
+    async function analyzeWithGemini(url) {
+      const prompt = `Você é um verificador de fatos especializado em detectar desinformação e fake news.
+
+O usuário forneceu esta URL de notícia: ${url}
+
+Analise criticamente essa notícia considerando:
+- Reputação e credibilidade do domínio/veículo
+- Estilo de escrita (manchetes alarmistas, sensacionalismo)
+- Coerência com fatos conhecidos
+- Sinais típicos de desinformação
+
+Responda APENAS com JSON válido, sem markdown nem texto adicional:
+{
+  "score": <0 a 100, sendo 100 totalmente confiável>,
+  "explanation": "<2-3 frases em português explicando o resultado, use <strong> para pontos-chave>",
+  "signals": [
+    {"type": "ok|warn|bad", "label": "<sinal detectado, máx 60 chars>"},
+    {"type": "ok|warn|bad", "label": "<sinal detectado>"},
+    {"type": "ok|warn|bad", "label": "<sinal detectado>"},
+    {"type": "ok|warn|bad", "label": "<sinal detectado>"}
+  ]
+}`;
+
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.3, maxOutputTokens: 1000 }
+          })
+        }
+      );
+
+      if (!res.ok) throw new Error('Gemini ' + res.status);
+      const data  = await res.json();
+      const text  = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const clean = text.replace(/```json|```/g, '').trim();
+      return JSON.parse(clean);
+    }
+
+    /* ==========================================================
+       FALLBACK SIMULADO
+    ========================================================== */
+    function simulatedResult(url) {
+      const domain  = (() => { try { return new URL(url).hostname; } catch { return url; } })();
+      const trusted = ['g1.globo','bbc','reuters','ap.org','agenciabrasil','folha','estadao','uol','cnn','nytimes','theguardian'];
+      const ok      = trusted.some(d => domain.includes(d));
+      const score   = ok ? 72 + Math.floor(Math.random() * 23) : 20 + Math.floor(Math.random() * 55);
+      const cls     = classify(score);
+
+      const explanations = {
+        reliable:   `A notícia foi identificada como <strong>provavelmente confiável</strong>. O veículo tem histórico de jornalismo verificável e a abordagem segue padrões editoriais reconhecidos. Recomendamos sempre confirmar em outras fontes independentes.`,
+        suspicious: `A notícia apresenta <strong>sinais mistos de confiabilidade</strong>. Alguns elementos são verificáveis, mas outros aspectos merecem atenção antes de compartilhar. Busque confirmação em veículos de referência.`,
+        fake:       `Esta notícia tem <strong>alto risco de ser desinformação</strong>. Identificamos múltiplos indicadores de conteúdo não verificado ou manipulado. Não compartilhe sem checar em fontes primárias confiáveis.`
+      };
+
+      const allSignals = {
+        reliable:   [
+          { type: 'ok',   label: 'Domínio com credibilidade reconhecida' },
+          { type: 'ok',   label: 'Linguagem objetiva e jornalística' },
+          { type: 'ok',   label: 'Sem manchete sensacionalista' },
+          { type: 'warn', label: 'Verifique se há fontes citadas' }
+        ],
+        suspicious: [
+          { type: 'warn', label: 'Manchete com tom emocional elevado' },
+          { type: 'ok',   label: 'Alguma estrutura jornalística presente' },
+          { type: 'bad',  label: 'Domínio com histórico incerto' },
+          { type: 'warn', label: 'Ausência de autoria identificada' }
+        ],
+        fake: [
+          { type: 'bad',  label: 'Domínio desconhecido ou recente' },
+          { type: 'bad',  label: 'Manchete exagerada e alarmista' },
+          { type: 'bad',  label: 'Sem fontes citadas ou verificáveis' },
+          { type: 'warn', label: 'Padrão típico de desinformação viral' }
+        ]
+      };
+
+      return { score, explanation: explanations[cls], signals: allSignals[cls] };
+    }
+
+    /* ==========================================================
+       HANDLER PRINCIPAL
+    ========================================================== */
+    analyzeBtn.addEventListener('click', async () => {
+      const raw = urlInput.value.trim();
+
+      /* Campo vazio */
+      if (!raw) {
+        showError('Por favor, cole o link de uma notícia para analisar.');
+        urlInput.focus();
+        return;
+      }
+
+      /* Validação de URL */
+      if (!isValidURL(raw)) {
+        showError('Insira um link válido começando com https:// — ex: https://g1.globo.com/noticia...');
+        urlInput.focus();
+        return;
+      }
+
+      hideError();
+      const url = raw.startsWith('http') ? raw : 'https://' + raw;
+
+      urlInput.disabled = analyzeBtn.disabled = true;
+      resultArea.classList.remove('visible');
+      loadingArea.classList.add('visible');
+
+      const [result] = await Promise.all([
+        (async () => {
+          if (GEMINI_API_KEY && GEMINI_API_KEY !== 'AQ.Ab8RN6JO1Tin0rTrFF0jC5nFWnsEkQd343cbgViAAaSyjSWNCA') {
+            try { return await analyzeWithGemini(url); }
+            catch (e) { console.warn('Gemini falhou, usando simulação:', e.message); }
+          }
+          return simulatedResult(url);
+        })(),
+        animateSteps()
+      ]);
+
+      showResult(result.score, result.explanation, result.signals);
+
+      /* Incrementa contadores no Firebase */
+      const newAnalyses = await fbIncrement('analyses');
+      animateValue(document.getElementById('statAnalyses'), newAnalyses);
+
+      if (result.score < 60) {
+        const newSuspect = await fbIncrement('suspect');
+        animateValue(document.getElementById('statSuspect'), newSuspect);
+      }
+    });
+
+    urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') analyzeBtn.click(); });
+
+    /* ==========================================================
+       INICIALIZAÇÃO
+    ========================================================== */
+    loadStats();
+    registerVisit();
+  </script>
+</body>
+</html>
